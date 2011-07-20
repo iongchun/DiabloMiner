@@ -87,6 +87,7 @@ class DiabloMiner {
 
   NetworkState[] networkStates;
   int networkStatesCount;
+  int networkStateIndex = 0;
   Proxy proxy = null;
   int getWorkRefresh = 5000;
   final ObjectMapper mapper = new ObjectMapper();
@@ -1475,10 +1476,11 @@ class DiabloMiner {
         boolean rollNTime = false;
         int rolledNTime = 0;
 
-        NetworkState networkState = networkStates[new Random().nextInt(networkStatesCount)];
+        NetworkState networkState;
         AtomicReference<GetWorkItem> getWorkIncoming = new AtomicReference<GetWorkItem>(null);
 
         GetWorkParser() {
+	  networkState = networkStates[(networkStateIndex++) % networkStatesCount];
           getWork(false);
         }
 
