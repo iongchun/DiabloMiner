@@ -650,6 +650,16 @@ class DiabloMiner {
       InputStream responseStream = null;
 
       try {
+	java.util.Map<String,java.util.List<String>> hdrMap = connection.getHeaderFields();
+	for (java.util.Iterator<String> hdrs = hdrMap.keySet().iterator(); hdrs.hasNext(); ) {
+	  String hdr = hdrs.next();
+	  String show = queryUrl.getHost() + " header=" + hdr + " values=";
+	  java.util.List<String> valList = hdrMap.get(hdr);
+	  for (java.util.Iterator<String> vals = valList.iterator(); vals.hasNext(); )
+	    show += vals.next() + ',';
+	  debug(show);
+	}
+
         if(!longPoll) {
           String xLongPolling = connection.getHeaderField("X-Long-Polling");
 
