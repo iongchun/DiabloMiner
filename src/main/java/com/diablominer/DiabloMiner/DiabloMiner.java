@@ -659,7 +659,7 @@ class DiabloMiner {
 	  java.util.List<String> valList = hdrMap.get(hdr);
 	  for (java.util.Iterator<String> vals = valList.iterator(); vals.hasNext(); )
 	    show += vals.next() + ',';
-	  debug(show);
+	  edebug(show);
 	}
 
         if(!longPoll) {
