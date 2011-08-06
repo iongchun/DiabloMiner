@@ -1505,7 +1505,6 @@ class DiabloMiner {
             default:
               nwsIdx = (int)(networkStatesCount * Math.random());
           }
-          edebug("new GetWorkParser: nws=" + nwsIdx);
           networkState = networkStates[nwsIdx];
           getWork(false);
         }
