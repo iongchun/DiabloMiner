@@ -976,7 +976,7 @@ class DiabloMiner {
               error("Cannot connect to " + queryUrl.getHost() + ": " + e.getLocalizedMessage());
 
               if(getWorkParser.networkState.index < networkStatesCount - 1)
-                getWorkParser.networkState = networkStates[getWorkParser.networkState.index++];
+                getWorkParser.networkState = networkStates[getWorkParser.networkState.index+1];
               else
                 getWorkParser.networkState = networkStates[0];
 
@@ -1493,16 +1493,20 @@ class DiabloMiner {
         AtomicReference<GetWorkItem> getWorkIncoming = new AtomicReference<GetWorkItem>(null);
 
         GetWorkParser() {
-	  switch (networkScheduler) {
-	    case FAILOVER:
-	      networkState = networkStates[0];
-	      break;
-	    case ROUND_ROBIN:
-	      networkState = networkStates[(networkStateIndex++) % networkStatesCount];
-	      break;
-	    default:
-	      networkState = networkStates[(int) (networkStatesCount * Math.random())];
-	  }
+          int nwsIdx;
+          switch (networkScheduler) {
+            case FAILOVER:
+              nwsIdx = 0;
+              networkState = networkStates[0];
+              break;
+            case ROUND_ROBIN:
+              nwsIdx = (networkStateIndex++) % networkStatesCount;
+              break;
+            default:
+              nwsIdx = (int)(networkStatesCount * Math.random());
+          }
+          edebug("new GetWorkParser: nws=" + nwsIdx);
+          networkState = networkStates[nwsIdx];
           getWork(false);
         }
 
@@ -1526,6 +1530,17 @@ class DiabloMiner {
           rolledNTime = 0;
         }
 
+        void switchNetwork() {
+          switch(networkScheduler) {
+            case ROUND_ROBIN:
+              networkState = networkStates[(networkState.index+1) % networkStates.length];
+              break;
+            case FAILOVER:
+              networkState = networkStates[0];
+              break;
+          }
+        }
+
         void getWork(boolean nonceSaturation) {
           if(nonceSaturation) {
             if(rollNTime && networkState.rollNTime) {
@@ -1537,6 +1552,7 @@ class DiabloMiner {
                 debug("Deferring getwork update due to nonce saturation");
               } else {
                 debug("Forcing getwork update due to nonce saturation");
+                switchNetwork();
                 networkState.getWorkAsync.add(this);
               }
 
@@ -1546,6 +1562,7 @@ class DiabloMiner {
             }
           }
 
+          switchNetwork();
           networkState.getWorkAsync.add(this);
 
           while(getWorkIncoming.get() == null) {
