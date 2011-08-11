@@ -1047,6 +1047,15 @@ class DiabloMiner {
       }
     }
 
+    boolean longPollActive = true;
+    Object longPollLock = new Object();
+
+    boolean isLongPollActive() {
+      synchronized (longPollLock) {
+        return longPollActive;
+      }
+    }
+
     class LongPollAsync implements Runnable {
       public void run() {
         while(running.get()) {
