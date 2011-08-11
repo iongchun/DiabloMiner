@@ -691,6 +691,11 @@ class DiabloMiner {
       request.write(requestMessage.toString());
       request.close();
       requestStream.close();
+      if(longPoll) {
+        synchronized (longPollLock) {
+          longPollActive = true;
+        }
+      }
 
       ObjectNode responseMessage = null;
 
@@ -1043,6 +1048,15 @@ class DiabloMiner {
       }
     }
 
+    boolean longPollActive = false;
+    Object longPollLock = new Object();
+
+    boolean isLongPollActive() {
+      synchronized (longPollLock) {
+        return longPollActive;
+      }
+    }
+
     class LongPollAsync implements Runnable {
       public void run() {
         while(running.get()) {
@@ -1052,6 +1066,9 @@ class DiabloMiner {
             debug(queryUrl.getHost() + ": Long poll returned");
           } catch(IOException e) {
             error("Cannot connect to " + queryUrl.getHost() + ": " + e.getLocalizedMessage());
+          }
+          synchronized (longPollLock) {
+            longPollActive = false;
           }
 
           forceUpdate();
@@ -1497,7 +1514,6 @@ class DiabloMiner {
           switch (networkScheduler) {
             case FAILOVER:
               nwsIdx = 0;
-              networkState = networkStates[0];
               break;
             case ROUND_ROBIN:
               nwsIdx = (networkStateIndex++) % networkStatesCount;
@@ -1530,14 +1546,17 @@ class DiabloMiner {
         }
 
         void switchNetwork() {
+          int newIdx = -1;
           switch(networkScheduler) {
             case ROUND_ROBIN:
-              networkState = networkStates[(networkState.index+1) % networkStates.length];
+              newIdx = (networkState.index+1) % networkStates.length;
               break;
             case FAILOVER:
-              networkState = networkStates[0];
+              newIdx = 0;
               break;
           }
+          if (newIdx >= 0 && networkStates[newIdx].isLongPollActive())
+            networkState = networkStates[newIdx];
         }
 
         void getWork(boolean nonceSaturation) {
