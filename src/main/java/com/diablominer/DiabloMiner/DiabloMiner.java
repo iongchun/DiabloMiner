@@ -959,6 +959,18 @@ class DiabloMiner {
       }
     }
 
+    private final AtomicLong atomicDelay = new AtomicLong(0);
+    private static final long MAX_DELAY = 1000;
+
+    private void delay() {
+      long delay = atomicDelay.get();
+      if (delay > 0) {
+        try {
+          Thread.sleep(delay > MAX_DELAY ? MAX_DELAY : delay);
+        } catch (InterruptedException e1) { }
+      }
+    }
+
     class GetWorkAsync implements Runnable {
       LinkedBlockingDeque<GetWorkParser> getWorkQueue = new LinkedBlockingDeque<GetWorkParser>();
       AtomicReference<GetWorkItem> queueIncoming = new AtomicReference<GetWorkItem>(null);
@@ -970,8 +982,10 @@ class DiabloMiner {
           if(queueIncoming.get() == null) {
             try {
               GetWorkItem getWorkItem = new GetWorkItem(doJSONRPC(false, false, getWorkMessage), rollNTime);
+              atomicDelay.set(0);
               queueIncoming.compareAndSet(null, getWorkItem);
             } catch (IOException e) {
+              atomicDelay.getAndAdd(250);
               error("Cannot connect to " + queryUrl.getHost() + ": " + e.getLocalizedMessage());
             }
           }
@@ -998,9 +1012,7 @@ class DiabloMiner {
 
             getWorkParser.networkState.getWorkAsync.add(getWorkParser);
 
-            try {
-              Thread.sleep(250);
-            } catch (InterruptedException e1) { }
+            delay();
           }
         }
       }
@@ -1027,6 +1039,7 @@ class DiabloMiner {
           while(sendWorkItem != null) {
             try {
               boolean accepted = doJSONRPC(false, true, sendWorkItem.message).getBooleanValue();
+              atomicDelay.set(0);
 
               if(accepted) {
                 info(queryUrl.getHost() + " accepted block " + currentBlocks.incrementAndGet() + " from " + sendWorkItem.deviceName);
@@ -1040,15 +1053,13 @@ class DiabloMiner {
 
               sendWorkItem = null;
             } catch (IOException e) {
+              atomicDelay.getAndAdd(250);
               if(!error) {
                 error("Cannot connect to " + queryUrl.getHost() + ": " + e.getLocalizedMessage());
                 error = true;
               }
-
-              try {
-                Thread.sleep(250);
-              } catch (InterruptedException e1) { }
             }
+            delay();
           }
         }
       }
@@ -1072,9 +1083,11 @@ class DiabloMiner {
         while(running.get()) {
           try {
             GetWorkItem getWorkItem = new GetWorkItem(doJSONRPC(true, false, getWorkMessage), rollNTime);
+            atomicDelay.set(0);
             getWorkAsync.queueIncoming.set(getWorkItem);
             debug(queryUrl.getHost() + ": Long poll returned");
           } catch(IOException e) {
+            atomicDelay.getAndAdd(250);
             error("Cannot connect to " + queryUrl.getHost() + ": " + e.getLocalizedMessage());
             synchronized(longPollLock) {
               longPollActive = false;
@@ -1083,9 +1096,7 @@ class DiabloMiner {
 
           forceUpdate();
 
-          try {
-            Thread.sleep(250);
-          } catch (InterruptedException e) {}
+          delay();
         }
       }
     }
