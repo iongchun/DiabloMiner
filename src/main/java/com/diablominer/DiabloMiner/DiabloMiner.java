@@ -941,7 +941,7 @@ class DiabloMiner {
     }
 
     private final AtomicLong atomicDelay = new AtomicLong(0);
-    private static final long MAX_DELAY = 1000;
+    private static final long MAX_DELAY = 15000;
 
     private void delay() {
       long delay = atomicDelay.get();
