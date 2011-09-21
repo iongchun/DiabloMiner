@@ -30,6 +30,7 @@ import java.net.PasswordAuthentication;
 import java.net.Proxy;
 import java.net.Proxy.Type;
 import java.net.URL;
+import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.security.MessageDigest;
@@ -960,7 +961,7 @@ class DiabloMiner {
     }
 
     private final AtomicLong atomicDelay = new AtomicLong(0);
-    private static final long MAX_DELAY = 1000;
+    private static final long MAX_DELAY = 15000;
 
     private void delay() {
       long delay = atomicDelay.get();
@@ -1086,6 +1087,8 @@ class DiabloMiner {
             atomicDelay.set(0);
             getWorkAsync.queueIncoming.set(getWorkItem);
             debug(queryUrl.getHost() + ": Long poll returned");
+          } catch(SocketTimeoutException e) {
+            debug(queryUrl.getHost() + ": Long poll timeout");
           } catch(IOException e) {
             atomicDelay.getAndAdd(250);
             error("Cannot connect to " + queryUrl.getHost() + ": " + e.getLocalizedMessage());
